@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Garbage Monitoring Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body {
+        font-family: "Poppins", sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f4f4f4;
+        display: flex;
+      }
+      .sidebar {
+        width: 250px;
+        background: #222;
+        color: white;
+        height: 100vh;
+        padding: 20px;
+        position: fixed;
+      }
+      .sidebar h2 {
+        text-align: center;
+        font-weight: 600;
+      }
+      .sidebar ul {
+        list-style: none;
+        padding: 0;
+      }
+      .sidebar ul li {
+        padding: 15px;
+        cursor: pointer;
+        border-radius: 5px;
+        transition: 0.3s;
+        position: relative;
+      }
+      .sidebar ul li:hover {
+        background: #444;
+      }
+      .alert-indicator {
+        width: 10px;
+        height: 10px;
+        background: red;
+        border-radius: 50%;
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        display: none;
+      }
+      .content {
+        top: 0;
+        margin-left: 260px;
+        flex: 1;
+        padding: 20px; /* Reduced padding */
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+      }
+      .header {
+        background: #1306c4;
+        color: white;
+        padding: 15px;
+        margin: 15px;
+        padding-right: 0px;
+        font-size: 1.8em;
+        font-weight: 600;
+        border-radius: 10px;
+        top: 0;
+      }
+      .footer {
+        background: #222;
+        color: white;
+        padding: 10px;
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        text-align: center;
+        font-weight: 500;
+      }
+      .dashboard {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        margin-top: 10px;
+        padding: 10px;
+      }
+      .card {
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        width: 200px;
+        text-align: center;
+        position: relative;
+      }
+      .circular-monitor {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        border: 10px solid green;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2em;
+        font-weight: bold;
+        margin: 20px auto;
+        color: black;
+        position: relative;
+      }
+      .graph-container {
+        margin: 20px auto; /* Centers the graph */
+        padding: 20px;
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 400px; /* Adjust as needed */
+        max-width: 800px; /* Prevents it from stretching too wide */
+        width: 100%;
+      }
+      canvas {
+        width: 100% !important;
+        max-width: 600px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sidebar">
+      <h2>Dashboard</h2>
+      <ul>
+        <li>Home</li>
+        <li>Waste Levels</li>
+        <li id="alerts">Alerts <span class="alert-indicator"></span></li>
+        <li>Reports</li>
+        <li>Settings</li>
+      </ul>
+    </div>
+    <div class="content">
+      <div class="header">Garbage Monitoring Dashboard</div>
+      <div class="dashboard" id="binDashboard"></div>
+      <div class="graph-container">
+        <h3>Waste Levels</h3>
+        <canvas id="wasteChart"></canvas>
+      </div>
+    </div>
+    <div class="footer">&copy; 2025 Garbage Monitoring System</div>
+
+    <script>
+      let wasteChart;
+      let binLevel = 10; // Initial bin level using dummy data
+
+      function createChart() {
+        let ctx = document.getElementById("wasteChart").getContext("2d");
+        wasteChart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: ["Bin 1"],
+            datasets: [
+              {
+                label: "Waste Level (%)",
+                backgroundColor:
+                  binLevel < 50 ? "green" : binLevel < 90 ? "orange" : "red",
+                data: [binLevel],
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true, max: 100 } },
+          },
+        });
+      }
+
+      function createBinMonitor(level) {
+        let borderColor = level < 50 ? "green" : level < 90 ? "orange" : "red";
+        return `
+                <div class="card">
+                    <h3>Bin 1</h3>
+                    <div class="circular-monitor" id="bin1" style="border-color: ${borderColor};">
+                        ${level}%
+                    </div>
+                </div>
+            `;
+      }
+
+      function updateBinLevel() {
+        binLevel = Math.min(binLevel + Math.floor(Math.random() * 10), 100); // Simulated gradual increase
+
+        let bins = document.getElementById("binDashboard");
+        bins.innerHTML = createBinMonitor(binLevel);
+
+        let alertTriggered = false;
+
+        if (binLevel >= 90) {
+          alertTriggered = true;
+          logAlert(1, binLevel);
+          sendEmailNotification(1, binLevel);
+        }
+
+        document.querySelector(".alert-indicator").style.display =
+          alertTriggered ? "block" : "none";
+        updateChart();
+      }
+
+      function updateChart() {
+        wasteChart.data.datasets[0].data = [binLevel];
+        wasteChart.data.datasets[0].backgroundColor =
+          binLevel < 50 ? "green" : binLevel < 90 ? "orange" : "red";
+        wasteChart.update();
+      }
+
+      function logAlert(binId, level) {
+        console.log(`Alert: Bin ${binId} has reached ${level}% capacity!`);
+      }
+
+      function sendEmailNotification(binId, level) {
+        console.log(
+          `Sending email: Bin ${binId} is at ${level}% capacity. Immediate action required!`
+        );
+      }
+
+      createChart();
+      updateBinLevel();
+      setInterval(updateBinLevel, 5000);
+    </script>
+  </body>
+</html>
